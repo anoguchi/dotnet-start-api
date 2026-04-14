@@ -1,4 +1,5 @@
 ﻿using GameStore.Business.Dtos;
+using GameStore.Business.Dtos.Validations;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GameStore.Business.Endpoints;
@@ -42,6 +43,20 @@ public class GameController : ControllerBase
     [HttpPost]
     public ActionResult<GameDto> CreateGame(CreateGameDto newGame)
     {
+        var validator = new CreateGameDtoValidation();
+        var results = validator.Validate(newGame);
+
+        if (!results.IsValid)
+        {
+            foreach (var failure in results.Errors)
+            {
+                Console.WriteLine("Property " + failure.PropertyName + " failed validation. Error was: " +
+                                  failure.ErrorMessage);
+            }
+
+            return BadRequest("Invalid game data.");
+        }
+
         var game = new GameDto(Guid.NewGuid(), newGame.Name, newGame.Genre, newGame.Price, newGame.ReleaseDate);
         games.Add(game);
         return CreatedAtAction(nameof(GetGameById), new { id = game.Id }, game);
@@ -50,6 +65,20 @@ public class GameController : ControllerBase
     [HttpPut("{id:Guid}")]
     public IActionResult UpdateGame(Guid id, UpdateGameDto updatedGame)
     {
+        var validator = new UpdateGameDtoValidation();
+        var results = validator.Validate(updatedGame);
+
+        if (!results.IsValid)
+        {
+            foreach (var failure in results.Errors)
+            {
+                Console.WriteLine("Property " + failure.PropertyName + " failed validation. Error was: " +
+                                  failure.ErrorMessage);
+            }
+
+            return BadRequest(results.Errors);
+        }
+
         var index = games.FindIndex(g => g.Id == id);
         if (index == -1) return NotFound();
 
