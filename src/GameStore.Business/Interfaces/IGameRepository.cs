@@ -2,7 +2,7 @@
 
 namespace GameStore.Business.Interfaces;
 
-public interface IGameRepository : IRepository<GameDto>
+public interface IGameRepository : IRepository<Game>
 {
     Task<IEnumerable<GameDto>> GetGamesByGenreAsync(string genre);
     Task<IEnumerable<GameDto>> GetGamesByPriceRangeAsync(decimal minPrice, decimal maxPrice);

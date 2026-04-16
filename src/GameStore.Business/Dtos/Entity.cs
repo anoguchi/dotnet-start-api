@@ -1,6 +1,6 @@
 ﻿namespace GameStore.Business.Dtos;
 
-public abstract record Entity
+public abstract class Entity
 {
     public Guid Id { get; init; } = Guid.NewGuid();
 };

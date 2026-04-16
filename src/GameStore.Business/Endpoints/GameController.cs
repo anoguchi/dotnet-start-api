@@ -1,5 +1,6 @@
 ﻿using GameStore.Business.Dtos;
 using GameStore.Business.Dtos.Validations;
+using GameStore.Business.Mappings;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GameStore.Business.Endpoints;
@@ -8,36 +9,47 @@ namespace GameStore.Business.Endpoints;
 [Route("api/games")]
 public class GameController : ControllerBase
 {
-    private static readonly List<GameDto> games =
-    [
-        new(
-            Guid.Parse("d42cfd2c-72cd-4925-968c-2183a8f54536"),
-            "Street Figther II",
-            "Fighting",
-            19.99M,
-            new DateOnly(1992, 7, 15)),
-        new(
-            Guid.Parse("aaf5f775-3f63-4bc1-8dc0-864c872c1f27"),
-            "Final Fantasy VII Rebirth",
-            "RPG",
-            69.99M,
-            new DateOnly(2024, 2, 20)),
-        new(
-            Guid.Parse("1d04cd6c-deb3-4d72-9ed6-fc3fa59a3043"),
-            "Astro Bot",
-            "Platformer",
-            22.45M,
-            new DateOnly(2025, 11, 11)),
-    ];
+    private static readonly List<Game>
+        Games =
+        [
+            new Game
+            {
+                Name = "The Legend of Zelda: Breath of the Wild",
+                Genre = "Action-adventure",
+                Price = 59.99m,
+                ReleaseDate = new DateOnly(2017, 3, 3)
+            },
+
+            new Game
+            {
+                Name = "God of War",
+                Genre = "Action-adventure",
+                Price = 49.99m,
+                ReleaseDate = new DateOnly(2018, 4, 20)
+            },
+
+            new Game
+            {
+                Name = "Red Dead Redemption 2",
+                Genre = "Action-adventure",
+                Price = 39.99m,
+                ReleaseDate = new DateOnly(2018, 10, 26)
+            }
+        ];
 
     [HttpGet]
-    public ActionResult<List<GameDto>> GetGames() => Ok(games);
+    public ActionResult<List<GameDto>> GetGames()
+    {
+        return Ok(Games.Select(g => g.ToDto()).ToList());
+    }
 
     [HttpGet("{id:Guid}")]
     public ActionResult<GameDto> GetGameById(Guid id)
     {
-        var game = games.Find(g => g.Id == id);
-        return game is null ? NotFound() : Ok(game);
+        var game = Games.Find(g => g.Id == id);
+        if (game is null) return NotFound();
+
+        return Ok(game.ToDto());
     }
 
     [HttpPost]
@@ -46,20 +58,25 @@ public class GameController : ControllerBase
         var validator = new CreateGameDtoValidation();
         var results = validator.Validate(newGame);
 
+        // if (!results.IsValid)
+        // {
+        //     foreach (var failure in results.Errors)
+        //     {
+        //         Console.WriteLine("Property " + failure.PropertyName + " failed validation. Error was: " +
+        //                           failure.ErrorMessage);
+        //     }
+        //
+        //     return BadRequest("Invalid game data.");
+        // }
+
+        // if (!results.IsValid)
+        //     return BadRequest(results.Errors.Select(e => new { e.PropertyName, e.ErrorMessage }));
         if (!results.IsValid)
-        {
-            foreach (var failure in results.Errors)
-            {
-                Console.WriteLine("Property " + failure.PropertyName + " failed validation. Error was: " +
-                                  failure.ErrorMessage);
-            }
+            return BadRequest(results.Errors);
 
-            return BadRequest("Invalid game data.");
-        }
-
-        var game = new GameDto(Guid.NewGuid(), newGame.Name, newGame.Genre, newGame.Price, newGame.ReleaseDate);
-        games.Add(game);
-        return CreatedAtAction(nameof(GetGameById), new { id = game.Id }, game);
+        var game = newGame.ToGame();
+        Games.Add(game);
+        return CreatedAtAction(nameof(GetGameById), new { id = game.Id }, game.ToDto());
     }
 
     [HttpPut("{id:Guid}")]
@@ -69,27 +86,20 @@ public class GameController : ControllerBase
         var results = validator.Validate(updatedGame);
 
         if (!results.IsValid)
-        {
-            foreach (var failure in results.Errors)
-            {
-                Console.WriteLine("Property " + failure.PropertyName + " failed validation. Error was: " +
-                                  failure.ErrorMessage);
-            }
-
             return BadRequest(results.Errors);
-        }
 
-        var index = games.FindIndex(g => g.Id == id);
-        if (index == -1) return NotFound();
+        var game = Games.Find(g => g.Id == id);
+        if (game is null) return NotFound();
 
-        games[index] = new GameDto(id, updatedGame.Name, updatedGame.Genre, updatedGame.Price, updatedGame.ReleaseDate);
+        game.UpdateFromDto(updatedGame);
         return NoContent();
+        
     }
 
     [HttpDelete("{id:Guid}")]
     public IActionResult DeleteGame(Guid id)
     {
-        games.RemoveAll(g => g.Id == id);
+        Games.RemoveAll(g => g.Id == id);
         return NoContent();
     }
 }
